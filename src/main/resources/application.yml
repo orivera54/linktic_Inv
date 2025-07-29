@@ -1,0 +1,88 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: inventario-service
+  
+  datasource:
+    url: jdbc:mysql://localhost:3306/ltprods?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: Valery2005*
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        
+  security:
+    user:
+      name: admin
+      password: admin123
+      
+  cloud:
+    circuitbreaker:
+      resilience4j:
+        instances:
+          productos-service:
+            sliding-window-size: 10
+            minimum-number-of-calls: 5
+            failure-rate-threshold: 50
+            wait-duration-in-open-state: 5000
+            permitted-number-of-calls-in-half-open-state: 3
+
+# Configuración de servicios externos
+app:
+  productos-service:
+    base-url: http://localhost:8080
+    api-key: tu-clave-de-api
+    timeout: 5000
+    retry:
+      max-attempts: 3
+      backoff:
+        initial-interval: 1000
+        multiplier: 2.0
+        max-interval: 10000
+
+# Configuración de logging estructurado
+logging:
+  level:
+    com.linktic.inventario: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/inventario-service.log
+
+# Configuración de Actuator para health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
+# Configuración de Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  default-produces-media-type: application/vnd.api+json
+  default-consumes-media-type: application/vnd.api+json 
