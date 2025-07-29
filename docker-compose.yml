@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # Base de datos MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: ltprods-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: Valery2005*
+      MYSQL_DATABASE: ltprods
+      MYSQL_USER: root
+      MYSQL_PASSWORD: Valery2005*
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - inventario-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Microservicio de Inventario
+  inventario-service:
+    build: .
+    container_name: inventario-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ltprods?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=Valery2005*
+      - APP_PRODUCTOS_SERVICE_BASE_URL=http://host.docker.internal:8080
+      - APP_PRODUCTOS_SERVICE_API_KEY=tu-clave-de-api
+      - APP_API_KEY=inventario-api-key
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - inventario-network
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/v1/inventario/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  mysql_data:
+
+networks:
+  inventario-network:
+    driver: bridge
